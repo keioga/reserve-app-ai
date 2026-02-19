@@ -1,0 +1,320 @@
+/**
+ * 設定値とデータ管理
+ */
+const TIMES = ["10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
+const CAPACITY = 5;
+
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzMYsFXdslrtYBiFSqBOcXcQRvQ_febxC-68eMqrqCPlaSgrPLuzjdXvtUmtO4t6VyhMw/exec'
+
+
+// ローカルストレージからデータを読み込み
+let students = JSON.parse(localStorage.getItem('sch_v4_students')) || [];
+let reservations = JSON.parse(localStorage.getItem('sch_v4_res')) || [];
+
+let currentStudent = null; // ログイン中のユーザー情報
+let viewDate = new Date();  // カレンダー表示基準日
+let selectedDateStr = null; // カレンダーで選択した日付(YYYY-MM-DD)
+
+// ページ読み込み時の初期化
+window.onload = () => {
+    renderStudentList();
+};
+
+/**
+ * モード（タブ）切り替え
+ */
+function switchTab(tab) {
+    document.querySelectorAll('.tab, .content').forEach(el => el.classList.remove('active'));
+    document.getElementById(tab + '-view').classList.add('active');
+    document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
+}
+
+/**
+ * ログイン・ログアウト処理
+ */
+function handleLogin() {
+    const id = document.getElementById('loginId').value;
+    const birth = document.getElementById('loginBirth').value;
+    const user = students.find(s => s.id === id && s.birthday === birth);
+
+    if (user) {
+        currentStudent = user;
+        document.getElementById('login-form').style.display = 'none';
+        document.getElementById('student-actions').style.display = 'block';
+        document.getElementById('displayUserName').innerText = user.name;
+        updateUI(); // 全体を更新
+    } else {
+        alert("会員番号または生年月日が正しくありません。");
+    }
+}
+
+function handleLogout() {
+    currentStudent = null;
+    selectedDateStr = null;
+    document.getElementById('login-form').style.display = 'block';
+    document.getElementById('student-actions').style.display = 'none';
+}
+
+/**
+ * 受講生用画面のUI更新
+ */
+function updateUI() {
+    if (!currentStudent) return;
+    renderCalendar();  // カレンダー更新
+    refreshStatus();   // 受講状況とリストを更新
+}
+
+function refreshStatus() {
+    const now = new Date();
+    const thisMonth = now.toISOString().substring(0, 7); // "YYYY-MM"
+    
+    // 今月の予約数をカウント
+    const count = reservations.filter(r => r.studentId === currentStudent.id && r.date.startsWith(thisMonth)).length;
+    document.getElementById('lessonCountInfo').innerText = `今月の受講： ${count} / ${currentStudent.limit} 回`;
+    
+    renderMyReservations(thisMonth);
+}
+
+/**
+ * カレンダー生成ロジック
+ */
+function renderCalendar() {
+    const grid = document.getElementById('calendarGrid');
+    grid.innerHTML = '';
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+    document.getElementById('calendarMonthDisplay').innerText = `${year}年${month + 1}月`;
+
+    // 曜日ヘッダー
+    ['日', '月', '火', '水', '木', '金', '土'].forEach(d => {
+        const el = document.createElement('div');
+        el.className = 'cal-day-label';
+        el.innerText = d;
+        grid.appendChild(el);
+    });
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const lastDate = new Date(year, month + 1, 0).getDate();
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // 20日ルール判定（翌月予約のロック）
+    const isNextMonth = (year > new Date().getFullYear() || (year === new Date().getFullYear() && month > new Date().getMonth()));
+    const isLocked = isNextMonth && (new Date().getDate() < 20);
+
+    // 空白埋め
+    for (let i = 0; i < firstDay; i++) {
+        const el = document.createElement('div');
+        el.className = 'cal-date empty';
+        grid.appendChild(el);
+    }
+
+    // 日付セル作成
+    for (let date = 1; date <= lastDate; date++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+        const el = document.createElement('div');
+        el.className = 'cal-date';
+        el.innerText = date;
+
+        // ステータス付与
+        const hasRes = reservations.some(r => r.studentId === currentStudent.id && r.date === dateStr);
+        if (hasRes) el.classList.add('has-res');
+        if (dateStr === todayStr) el.classList.add('today');
+        if (dateStr === selectedDateStr) el.classList.add('selected');
+
+        // クリック制御
+        if (dateStr < todayStr || isLocked) {
+            el.classList.add('disabled');
+        } else {
+            el.onclick = () => selectDate(dateStr);
+        }
+        grid.appendChild(el);
+    }
+}
+
+function changeMonth(diff) {
+    viewDate.setMonth(viewDate.getMonth() + diff);
+    renderCalendar();
+}
+
+/**
+ * 日付選択時の処理
+ */
+function selectDate(dateStr) {
+    selectedDateStr = dateStr;
+    document.getElementById('selectedDateText').innerText = dateStr;
+    document.getElementById('timeSelectionArea').style.display = 'block';
+    renderCalendar();
+    renderSlots(dateStr);
+    
+    // 時間選択欄へスクロール
+    document.getElementById('timeSelectionArea').scrollIntoView({ behavior: 'smooth' });
+}
+
+function cancelSelection() {
+    selectedDateStr = null;
+    document.getElementById('timeSelectionArea').style.display = 'none';
+    renderCalendar();
+}
+
+/**
+ * 時間枠（スロット）の生成
+ */
+function renderSlots(date) {
+    const container = document.getElementById('slotContainer');
+    container.innerHTML = '';
+
+    TIMES.forEach(t => {
+        const count = reservations.filter(r => r.date === date && r.time === t).length;
+        const remain = CAPACITY - count;
+        
+        let statusClass = 'bg-ok', statusText = '〇';
+        if (remain <= 0) { statusClass = 'bg-ng'; statusText = '×'; }
+        else if (remain <= 2) { statusClass = 'bg-warn'; statusText = '要確認'; }
+
+        const div = document.createElement('div');
+        div.className = `slot-card ${remain <= 0 ? 'full' : ''}`;
+        div.innerHTML = `
+            <strong>${t}</strong><br>
+            <span class="badge ${statusClass}">${statusText} (${remain})</span>
+            ${remain > 0 ? `<input type="checkbox" name="slotTime" value="${t}">` : ''}
+        `;
+        
+        // カード全体をクリックしてもチェックが入るようにする
+        div.onclick = (e) => {
+            if (remain > 0 && e.target.type !== 'checkbox') {
+                const cb = div.querySelector('input');
+                cb.checked = !cb.checked;
+            }
+        };
+        container.appendChild(div);
+    });
+}
+
+/**
+ * 予約実行処理
+ */
+// ★★★ 予約実行（ローカル保存＋Google送信） ★★★
+function makeBooking() {
+    const selected = Array.from(document.querySelectorAll('input[name="slotTime"]:checked')).map(cb => cb.value);
+    if(!selected.length) return alert("時間を選択してください。");
+
+    const month = selectedDateStr.substring(0, 7);
+    const currentCount = reservations.filter(r => r.studentId === currentStudent.id && r.date.startsWith(month)).length;
+    if(currentCount + selected.length > currentStudent.limit) return alert("今月の上限回数を超えてしまいます。");
+
+    if(confirm("予約を確定しますか？")) {
+        selected.forEach(t => {
+            // 1. ローカル用データ保存（ここが画面表示用）
+            reservations.push({ id: Date.now()+Math.random(), studentId: currentStudent.id, date: selectedDateStr, time: t, course: currentStudent.course });
+            
+            // 2. Googleへ送信
+            sendToGoogleSheet(selectedDateStr, t, "予約");
+        });
+        
+        saveData(); // ローカルに永続化
+        alert("予約しました！");
+        cancelSelection(); updateUI();
+    }
+}
+
+// ★★★ 予約取消（ローカル削除＋Google送信） ★★★
+function cancelBooking(id) {
+    if(confirm("予約を取り消しますか？")) {
+        const target = reservations.find(r => r.id === id);
+        if(target) {
+            // Googleへ「取消」として送信
+            sendToGoogleSheet(target.date, target.time, "取消");
+        }
+
+        reservations = reservations.filter(r => r.id !== id);
+        saveData(); updateUI();
+    }
+}
+
+ // Google送信関数
+function sendToGoogleSheet(date, time, status) {
+    if(!GAS_URL || GAS_URL.startsWith('ここ')) return;
+    const data = { date: date, time: time, studentId: currentStudent.id, name: currentStudent.name, course: currentStudent.course, status: status };
+    fetch(GAS_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+    .catch(e => console.error("送信エラー", e));
+}
+
+/**
+ * 予約一覧表示
+ */
+function renderMyReservations(thisMonth) {
+    const list = document.getElementById('myReservations');
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    // 今月以降の自分の予約を抽出
+    const myRes = reservations.filter(r => r.studentId === currentStudent.id && r.date >= thisMonth)
+                              .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+
+    list.innerHTML = myRes.map(r => `
+        <div class="list-item">
+            <div>
+                <strong>${r.date.substring(5)} ${r.time}</strong><br>
+                <small>${r.course}</small>
+            </div>
+            ${r.date > todayStr ? 
+                `<button class="btn-outline btn-sm" style="color:red; border-color:red;" onclick="cancelBooking(${r.id})">取消</button>` : 
+                '<small style="color:#999">終了</small>'}
+        </div>
+    `).join('') || '<p style="color:#999; text-align:center;">予約はありません。</p>';
+}
+
+function cancelBooking(id) {
+    if (confirm("予約を取り消しますか？")) {
+        reservations = reservations.filter(r => r.id !== id);
+        localStorage.setItem('sch_v4_res', JSON.stringify(reservations));
+        updateUI();
+    }
+}
+
+/**
+ * 管理画面用：受講生登録
+ */
+function registerStudent() {
+    const name = document.getElementById('s_name').value;
+    const id = document.getElementById('s_id').value;
+    const birth = document.getElementById('s_birth').value;
+    const limit = parseInt(document.getElementById('s_limit').value);
+    const course = document.getElementById('s_course').value;
+
+    if (!name || !id || !birth) return alert("未入力の項目があります。");
+
+    const student = { id, name, birthday: birth, limit, course };
+    
+    // IDが重複していたら上書き、なければ追加
+    students = students.filter(s => s.id !== id);
+    students.push(student);
+    
+    localStorage.setItem('sch_v4_students', JSON.stringify(students));
+    renderStudentList();
+    alert("受講生を登録・更新しました。");
+    
+    // 入力欄をクリア
+    document.getElementById('s_name').value = '';
+    document.getElementById('s_id').value = '';
+    document.getElementById('s_birth').value = '';
+}
+
+function renderStudentList() {
+    const list = document.getElementById('studentList');
+    list.innerHTML = "<h2>登録受講生一覧</h2>" + students.map(s => `
+        <div class="list-item">
+            <span><b>${s.name}</b> (ID:${s.id} / 月${s.limit}回)</span>
+            <button class="btn-outline btn-sm" style="color:red; border-color:red;" onclick="deleteStudent('${s.id}')">削除</button>
+        </div>
+    `).join('');
+}
+
+function deleteStudent(id) {
+    if (confirm("この受講生データを削除しますか？\n（予約データも削除されます）")) {
+        students = students.filter(s => s.id !== id);
+        reservations = reservations.filter(r => r.studentId !== id);
+        localStorage.setItem('sch_v4_students', JSON.stringify(students));
+        localStorage.setItem('sch_v4_res', JSON.stringify(reservations));
+        renderStudentList();
+    }
+}

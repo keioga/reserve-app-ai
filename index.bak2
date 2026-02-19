@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>パソコン教室 予約システム</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+    <div class="tabs no-print">
+        <div class="tab active" onclick="switchTab('student')">受講生メニュー</div>
+        <div class="tab" onclick="switchTab('admin')">スクール管理</div>
+    </div>
+
+    <!-- ─── 受講生メニュー ─── -->
+    <div id="student-view" class="content active">
+        <div id="login-form" class="login-box">
+            <h2>ログイン</h2>
+            <p style="font-size:0.8rem; color:#666;">会員番号と生年月日(月日4桁)を入力してください</p>
+            <label>会員番号</label><input type="text" id="loginId" placeholder="例: 1001">
+            <label>生年月日</label><input type="text" id="loginBirth" placeholder="例: 0101">
+            <button onclick="handleLogin()" style="margin-top:20px;">ログイン</button>
+        </div>
+
+        <div id="student-actions" style="display:none;">
+            <div class="user-info-bar">
+                <div>
+                    <strong><span id="displayUserName"></span> 様</strong><br>
+                    <small id="lessonCountInfo"></small>
+                </div>
+                <button class="btn-outline btn-sm" onclick="handleLogout()">ログアウト</button>
+            </div>
+            
+            <h2>1. 日付を選択</h2>
+            <div class="calendar-header">
+                <button class="btn-outline btn-sm" onclick="changeMonth(-1)">前月</button>
+                <strong id="calendarMonthDisplay"></strong>
+                <button class="btn-outline btn-sm" onclick="changeMonth(1)">次月</button>
+            </div>
+            <div id="calendarGrid" class="calendar-grid"></div>
+
+            <div id="timeSelectionArea" class="selection-panel" style="display:none;">
+                <h2 style="margin-top:0">2. <span id="selectedDateText"></span> の時間を選択</h2>
+                <div id="slotContainer" class="slot-grid"></div>
+                <div id="contactMessage" style="display:none; color:#d63384; font-weight:bold; margin-top:10px; background:#fff0f5; padding:10px; border-radius:4px;">
+                    ※ 残りわずかのため、教室に直接お問い合わせください。
+                </div>
+                <button id="submitBookingBtn" onclick="makeBooking()" style="margin-top:20px;">予約を確定する</button>
+                <button class="btn-cancel-text" onclick="cancelSelection()">閉じる</button>
+            </div>
+
+            <h2>今月の予約状況</h2>
+            <div id="myReservations"></div>
+        </div>
+    </div>
+
+    <!-- ─── 管理画面 ─── -->
+    <div id="admin-view" class="content">
+        <!-- 管理画面内タブ -->
+        <div class="admin-tabs no-print">
+            <button class="btn-outline btn-sm active" id="btn-tab-week" onclick="switchAdminSubTab('week')">週間予約状況</button>
+            <button class="btn-outline btn-sm" id="btn-tab-month" onclick="switchAdminSubTab('month')">月間予約一覧</button>
+        </div>
+
+        <!-- ①週間スケジュール（座席表） -->
+        <div id="admin-week-view">
+            <h2 class="no-print">週間予約状況（座席表）</h2>
+            <p class="no-print" style="font-size:0.8rem;">※セルをクリックすると予約・取消ができます</p>
+            <div class="week-nav no-print">
+                <button class="btn-outline btn-sm" onclick="changeAdminWeek(-7)">前の週</button>
+                <span id="adminWeekRangeDisplay" style="font-weight:bold; font-size:1.1rem;"></span>
+                <button class="btn-outline btn-sm" onclick="changeAdminWeek(7)">次の週</button>
+            </div>
+            <div id="weeklyScheduleContainer"></div>
+        </div>
+
+        <!-- ②月間予約一覧（印刷用） -->
+        <div id="admin-month-view" style="display:none;">
+            <h2 class="no-print">月間予約一覧</h2>
+            <div class="week-nav no-print">
+                <button class="btn-outline btn-sm" onclick="changeAdminListMonth(-1)">前月</button>
+                <span id="adminListMonthDisplay" style="font-weight:bold; font-size:1.1rem;"></span>
+                <button class="btn-outline btn-sm" onclick="changeAdminListMonth(1)">次月</button>
+                <button class="btn-outline btn-sm" onclick="window.print()">印刷</button>
+            </div>
+            <div id="monthlyListContainer"></div>
+        </div>
+
+        <div class="no-print">
+            <hr style="margin:40px 0; border:0; border-top:1px solid #ddd;">
+
+            <h2>受講生登録</h2>
+            <div class="login-box">
+                <div class="admin-grid">
+                    <div><label>氏名</label><input type="text" id="s_name" placeholder="氏名"></div>
+                    <div><label>会員番号</label><input type="text" id="s_id" placeholder="1001"></div>
+                    <div><label>生年月日</label><input type="text" id="s_birth" placeholder="0101"></div>
+                    <div><label>月間上限</label><input type="number" id="s_limit" value="4"></div>
+                </div>
+                <label>コース</label>
+                <select id="s_course">
+                    <option value="パソコン教室">パソコン教室</option>
+                    <option value="プログラミング教室">プログラミング教室</option>
+                    <option value="スマホ活用講座">スマホ活用講座</option>
+                </select>
+                <button onclick="registerStudent()" style="margin-top:15px;">登録・更新</button>
+            </div>
+            
+            <div id="studentList" style="margin-top:20px;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 管理者予約用モーダル -->
+<div id="adminBookingModal" class="modal">
+    <div class="modal-content">
+        <h3>予約登録</h3>
+        <p><span id="modalDate"></span> <span id="modalTime"></span><br>PC<span id="modalPc"></span></p>
+        <label>受講生を選択してください</label>
+        <select id="modalStudentSelect"></select>
+        <div style="margin-top:20px; display:flex; gap:10px;">
+            <button onclick="executeAdminBooking()">予約する</button>
+            <button class="btn-outline" onclick="closeModal()">キャンセル</button>
+        </div>
+    </div>
+</div>
+
+<!-- データ読み込み中オーバーレイ -->
+<div id="loadingOverlay" class="loading-overlay" style="display:none;">
+    <div class="spinner"></div>
+    <p style="color:white; margin-top:10px;">データを同期中...</p>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

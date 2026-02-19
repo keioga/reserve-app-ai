@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>スクール管理画面</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .container { max-width: 950px; }
+        .header-bar { background: #333; }
+        /* 管理画面特有のスタイル */
+        .admin-tabs { margin-bottom: 20px; display: flex; gap: 10px; }
+        .admin-tabs button { flex: 1; }
+        .admin-tabs button.active { background: #333; color: white; border-color: #333; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-bar no-print">
+        <h1>スクール管理画面</h1>
+        <div style="font-size:0.8rem;">
+            <a href="index.html" target="_blank" style="color:#fff;">受講生画面へ</a>
+        </div>
+    </div>
+
+    <div id="admin-view" class="content active">
+        
+        <!-- 管理用タブ -->
+        <div class="admin-tabs no-print">
+            <button class="btn-outline btn-sm active" id="btn-tab-week" onclick="switchAdminSubTab('week')">週間予約状況</button>
+            <button class="btn-outline btn-sm" id="btn-tab-month" onclick="switchAdminSubTab('month')">月間予約一覧</button>
+            <button class="btn-outline btn-sm" id="btn-tab-student" onclick="switchAdminSubTab('student')">受講生登録</button>
+        </div>
+
+        <!-- ①週間スケジュール（座席表） -->
+        <div id="admin-week-view">
+            <h2 class="no-print">週間予約状況（座席表）</h2>
+            <p class="no-print" style="font-size:0.8rem; color:#666;">セルをクリックして予約・取消を行います。</p>
+            <div class="week-nav no-print">
+                <button class="btn-outline btn-sm" onclick="changeAdminWeek(-7)">前の週</button>
+                <span id="adminWeekRangeDisplay" style="font-weight:bold; font-size:1.1rem;"></span>
+                <button class="btn-outline btn-sm" onclick="changeAdminWeek(7)">次の週</button>
+            </div>
+            <div id="weeklyScheduleContainer"></div>
+        </div>
+
+        <!-- ②月間予約一覧（印刷用） -->
+        <div id="admin-month-view" style="display:none;">
+            <h2 class="no-print">月間予約一覧</h2>
+            <div class="week-nav no-print">
+                <button class="btn-outline btn-sm" onclick="changeAdminListMonth(-1)">前月</button>
+                <span id="adminListMonthDisplay" style="font-weight:bold; font-size:1.1rem;"></span>
+                <button class="btn-outline btn-sm" onclick="changeAdminListMonth(1)">次月</button>
+                <button class="btn-outline btn-sm" onclick="window.print()">印刷</button>
+            </div>
+            <div id="monthlyListContainer"></div>
+        </div>
+
+        <!-- ③受講生登録 -->
+        <div id="admin-student-view" style="display:none;">
+            <h2>受講生登録</h2>
+            <div class="login-box">
+                <div class="admin-grid">
+                    <div><label>氏名</label><input type="text" id="s_name" placeholder="氏名"></div>
+                    <div><label>会員番号</label><input type="text" id="s_id" placeholder="1001"></div>
+                    <div><label>生年月日</label><input type="text" id="s_birth" placeholder="0101"></div>
+                    <div><label>月間上限</label><input type="number" id="s_limit" value="4"></div>
+                </div>
+                <label>コース</label>
+                <select id="s_course">
+                    <option value="パソコン教室">パソコン教室</option>
+                    <option value="プログラミング教室">プログラミング教室</option>
+                    <option value="スマホ活用講座">スマホ活用講座</option>
+                </select>
+                <button onclick="registerStudent()" style="margin-top:15px;">登録・更新</button>
+            </div>
+            <div id="studentList" style="margin-top:20px;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 予約登録モーダル -->
+<div id="adminBookingModal" class="modal">
+    <div class="modal-content">
+        <h3>予約登録</h3>
+        <p><span id="modalDate"></span> <span id="modalTime"></span><br>PC<span id="modalPc"></span></p>
+        <label>受講生を選択</label>
+        <select id="modalStudentSelect"></select>
+        <div style="margin-top:20px; display:flex; gap:10px;">
+            <button onclick="executeAdminBooking()">予約する</button>
+            <button class="btn-outline" onclick="closeModal()">キャンセル</button>
+        </div>
+    </div>
+</div>
+
+<div id="loadingOverlay" class="loading-overlay" style="display:none;">
+    <div class="spinner"></div>
+    <p style="color:white; margin-top:10px;">データを同期中...</p>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

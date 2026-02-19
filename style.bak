@@ -1,0 +1,245 @@
+:root {
+    --primary: #0055aa;
+    --secondary: #6c757d;
+    --bg: #f4f7f9;
+    --white: #ffffff;
+    --ok: #28a745;
+    --warn: #ffc107;
+    --ng: #dc3545;
+    --reserved: #e1f0ff; /* 予約済みの日付の色 */
+}
+
+body {
+    font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+    background: var(--bg);
+    margin: 0;
+    padding: 10px;
+    color: #333;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: var(--white);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+/* タブ切り替え */
+.tabs {
+    display: flex;
+    background: #e9ecef;
+}
+
+.tab {
+    flex: 1;
+    padding: 15px;
+    text-align: center;
+    cursor: pointer;
+    font-weight: bold;
+    border-bottom: 3px solid transparent;
+}
+
+.tab.active {
+    background: var(--white);
+    border-bottom: 3px solid var(--primary);
+    color: var(--primary);
+}
+
+.content {
+    padding: 20px;
+    display: none;
+}
+
+.content.active {
+    display: block;
+}
+
+h2 {
+    border-left: 5px solid var(--primary);
+    padding-left: 10px;
+    font-size: 1.1rem;
+    margin: 25px 0 10px;
+}
+
+label {
+    display: block;
+    margin-top: 15px;
+    font-weight: bold;
+    font-size: 0.85rem;
+    color: #555;
+}
+
+input, select, button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 5px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-sizing: border-box;
+    font-size: 1rem;
+}
+
+button {
+    background: var(--primary);
+    color: white;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+.btn-sm {
+    width: auto;
+    padding: 5px 15px;
+    font-size: 0.8rem;
+    margin-top: 5px;
+}
+
+.btn-outline {
+    background: white;
+    color: var(--primary);
+    border: 1px solid var(--primary);
+}
+
+.btn-cancel-text {
+    width: 100%;
+    margin-top: 10px;
+    border: none;
+    color: #666;
+    background: transparent;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+/* ログイン・ユーザー情報 */
+.login-box {
+    border: 2px solid #eee;
+    padding: 20px;
+    border-radius: 10px;
+    background: #fdfdfd;
+}
+
+.user-info-bar {
+    background: #eef6ff;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* カレンダーUI */
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    text-align: center;
+}
+
+.cal-day-label {
+    font-weight: bold;
+    font-size: 0.75rem;
+    color: #666;
+    padding: 5px 0;
+}
+
+.cal-date {
+    padding: 10px 0;
+    border: 1px solid #eee;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    position: relative;
+    min-height: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.cal-date.empty { border: none; cursor: default; }
+.cal-date.disabled { background: #f9f9f9; color: #ccc; cursor: not-allowed; }
+.cal-date.selected { border: 2px solid var(--primary); background: #fff; z-index: 1; }
+.cal-date.has-res { background-color: var(--reserved); color: var(--primary); }
+.cal-date.has-res::after { content: "●"; font-size: 8px; position: absolute; bottom: 2px; }
+.cal-date.today { color: var(--ng); text-decoration: underline; }
+
+/* 時間枠 */
+.selection-panel {
+    background: #fff;
+    padding: 15px;
+    border: 2px solid var(--primary);
+    border-radius: 10px;
+    margin-top: 15px;
+}
+
+.slot-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.slot-card {
+    border: 2px solid #ddd;
+    padding: 12px;
+    border-radius: 8px;
+    position: relative;
+    cursor: pointer;
+    text-align: center;
+}
+
+.slot-card input {
+    width: auto;
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    margin: 0;
+}
+
+.slot-card.full {
+    background: #f0f0f0;
+    color: #999;
+    cursor: not-allowed;
+}
+
+.badge {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.bg-ok { background: #e6ffed; color: var(--ok); }
+.bg-warn { background: #fff9e6; color: var(--warn); }
+.bg-ng { background: #ffeef0; color: var(--ng); }
+
+/* リスト・管理画面 */
+.list-item {
+    border-bottom: 1px solid #eee;
+    padding: 10px 0;
+    font-size: 0.9rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.admin-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}

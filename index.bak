@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>パソコン教室 予約システム</title>
+    <!-- CSSファイルの読み込み -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+    <!-- タブ切り替えメニュー -->
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('student')">受講生メニュー</div>
+        <div class="tab" onclick="switchTab('admin')">スクール管理</div>
+    </div>
+
+    <!-- ─── 受講生メニュー ─── -->
+    <div id="student-view" class="content active">
+        <!-- ログインフォーム -->
+        <div id="login-form" class="login-box">
+            <h2>ログイン</h2>
+            <p style="font-size: 0.8rem; color: #666;">会員番号と生年月日(月日4桁)を入力してください</p>
+            <label>会員番号</label><input type="text" id="loginId" placeholder="1001">
+            <label>生年月日（月日4桁）</label><input type="text" id="loginBirth" placeholder="0101">
+            <button onclick="handleLogin()" style="margin-top:20px;">ログイン</button>
+        </div>
+
+        <!-- ログイン後の予約画面 -->
+        <div id="student-actions" style="display:none;">
+            <div class="user-info-bar">
+                <div>
+                    <strong><span id="displayUserName"></span> 様</strong><br>
+                    <small id="lessonCountInfo"></small>
+                </div>
+                <button class="btn-outline btn-sm" onclick="handleLogout()">ログアウト</button>
+            </div>
+            
+            <h2>1. 日付を選択してください</h2>
+            <div class="calendar-header">
+                <button class="btn-outline btn-sm" onclick="changeMonth(-1)">前月</button>
+                <strong id="calendarMonthDisplay"></strong>
+                <button class="btn-outline btn-sm" onclick="changeMonth(1)">次月</button>
+            </div>
+            <div id="calendarGrid" class="calendar-grid"></div>
+
+            <!-- 時間選択エリア（日付選択時に表示） -->
+            <div id="timeSelectionArea" class="selection-panel" style="display:none;">
+                <h2 style="margin-top:0">2. <span id="selectedDateText"></span> の時間を選択</h2>
+                <div id="slotContainer" class="slot-grid"></div>
+                <button onclick="makeBooking()" style="margin-top:20px;">予約を確定する</button>
+                <button class="btn-cancel-text" onclick="cancelSelection()">閉じる</button>
+            </div>
+
+            <h2>今月の予約状況</h2>
+            <div id="myReservations"></div>
+        </div>
+    </div>
+
+    <!-- ─── スクール管理画面 ─── -->
+    <div id="admin-view" class="content">
+        <h2>受講生登録</h2>
+        <div class="login-box">
+            <div class="admin-grid">
+                <div><label>氏名</label><input type="text" id="s_name" placeholder="氏名"></div>
+                <div><label>会員番号</label><input type="text" id="s_id" placeholder="1001"></div>
+                <div><label>生年月日(月日4桁)</label><input type="text" id="s_birth" placeholder="0101"></div>
+                <div><label>月間上限回数</label><input type="number" id="s_limit" value="4"></div>
+            </div>
+            <label>標準コース</label>
+            <select id="s_course">
+                <option value="パソコン教室">パソコン教室</option>
+                <option value="プログラミング教室">プログラミング教室</option>
+            </select>
+            <button onclick="registerStudent()" style="margin-top:15px;">受講生を登録保存</button>
+        </div>
+        <div id="studentList"></div>
+    </div>
+</div>
+
+<!-- JavaScriptファイルの読み込み -->
+<script src="script.js"></script>
+</body>
+</html>
