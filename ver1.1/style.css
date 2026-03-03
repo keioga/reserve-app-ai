@@ -107,6 +107,3 @@ button:disabled { background: #ccc; cursor: not-allowed; opacity: 1; }
 
 /* マンツーマンコース専用の色（script.jsの判定で使用） */
 .cell-pc-man { background-color: #d4edda; color: #155724; font-weight: bold; }
-
-/* 検定試験用のセル色 */
-.cell-exam { background-color: #f3e5f5; color: #7b1fa2; font-weight: bold; border: 2px solid #7b1fa2 !important; }

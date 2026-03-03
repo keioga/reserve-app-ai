@@ -66,56 +66,16 @@
                     <div><label>会員番号</label><input type="text" id="s_id" placeholder="1001"></div>
                     <div><label>生年月日</label><input type="text" id="s_birth" placeholder="0101"></div>
                     <div><label>月間上限</label><input type="number" id="s_limit" value="4"></div>
-
-                    <div>
-                        <label>固定曜日</label>
-                        <select id="s_fixed_day">
-                            <option value="">なし</option>
-                            <option value="1">月曜日</option>
-                            <option value="2">火曜日</option>
-                            <option value="3">水曜日</option>
-                            <option value="4">木曜日</option>
-                            <option value="5">金曜日</option>
-                            <option value="6">土曜日</option>
-                            <option value="0">日曜日</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>固定時間</label>
-                        <select id="s_fixed_time">
-                            <option value="">なし</option>
-                            <option value="09:00">09:00</option>
-                            <option value="10:00">10:00</option>
-                            <option value="11:00">11:00</option>
-                            <option value="12:00">12:00</option>
-                            <option value="13:00">13:00</option>
-                            <option value="14:00">14:00</option>
-                            <option value="15:00">15:00</option>
-                            <option value="16:00">16:00</option>
-                            <option value="17:00">17:00</option>
-                            <option value="18:00">18:00</option>
-                            <option value="19:00">19:00</option>
-                        </select>
-                    </div>
                 </div>
                 <label>コース</label>
                 <select id="s_course">
                     <option value="パソコン教室">パソコン教室</option>
                     <option value="プログラミング教室">プログラミング教室</option>
-                    <option value="マンツーマンコース">マンツーマンコース</option>
+                    <option value="スマホ活用講座">スマホ活用講座</option>
                 </select>
                 <button onclick="registerStudent()" style="margin-top:15px;">登録・更新</button>
             </div>
             <div id="studentList" style="margin-top:20px;"></div>
-        </div>
-        <!-- school.html: registerStudent() ボタンのすぐ下あたりに追記 -->
-        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px dashed #ccc;">
-            <h3>検定試験名の登録</h3>
-            <div style="display: flex; gap: 10px;">
-                <input type="text" id="newExamName" placeholder="例: 日商PC検定3級">
-                <button onclick="registerExamName()" class="btn-outline" style="width: auto;">試験登録</button>
-            </div>
-            <div id="examNameList" style="margin-top: 10px; font-size: 0.85rem; color: #666;"></div>
         </div>
     </div>
 </div>
@@ -125,14 +85,8 @@
     <div class="modal-content">
         <h3>予約登録</h3>
         <p><span id="modalDate"></span> <span id="modalTime"></span><br>PC<span id="modalPc"></span></p>
-        <div id="studentSelectionArea">
-            <label>受講生を選択</label>
-            <select id="modalStudentSelect"></select>
-        </div>
-        <div id="examSelectionArea" style="margin-top:15px; display:none; padding:10px; background:#f9f9f9; border-radius:5px;">
-            <label>検定試験として登録</label>
-            <select id="modalExamSelect"></select>
-        </div>
+        <label>受講生を選択</label>
+        <select id="modalStudentSelect"></select>
         <div style="margin-top:20px; display:flex; gap:10px;">
             <button onclick="executeAdminBooking()">予約する</button>
             <button class="btn-outline" onclick="closeModal()">キャンセル</button>

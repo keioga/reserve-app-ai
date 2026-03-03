@@ -14,7 +14,6 @@ let adminViewDate = new Date();
 let adminListMonth = new Date();
 let selectedDateStr = null;
 let selectedCell = null;
-let examNames = []; 
 
 /**
  * 共通：データのクレンジング
@@ -67,112 +66,43 @@ async function syncData() {
             date: normalizeDate(r.date),
             time: cleanTime(r.time),
             studentId: cleanId(r.studentId),
-            status: String(r.status || "").trim(),
-             pcIndex: (r.pcIndex === undefined || r.pcIndex === null || r.pcIndex === "") ? 0 : Number(r.pcIndex)
+            status: String(r.status || "").trim()
         }));
 
         students = data.students.map(s => ({ ...s, id: cleanId(s.id) }));
 
-        examNames = data.examNames || [];
-
-        console.log("読み込まれた検定名:", examNames); 
-
-        if (document.getElementById('examNameList')) {
-            document.getElementById('examNameList').innerText = "登録済み: " + examNames.join(', ');
-        }
         // 2. 照合用マップ：ID|日付|時間をキーに「最新のステータス」を保持
         const statusMap = new Map();
-        // rawRes.forEach(r => {
-        //     statusMap.set(`${r.studentId}|${r.date}|${r.time}`, r.status);
-        // });
         rawRes.forEach(r => {
-            // キーに pcIndex を含めて、同じ時間の複数予約（検定等）を識別可能にする
-            // const key = `${r.studentId}|${r.date}|${r.time}|${r.pcIndex}`;
-            const key = r.studentId + "_" + r.date + "_" + r.time + "_" + (r.pcIndex || 0);
-            statusMap.set(key, r.status);
-            
+            statusMap.set(`${r.studentId}|${r.date}|${r.time}`, r.status);
         });
 
         // 3. 仮想（固定）予約の生成
-        // const statusSet = new Set(rawRes.map(r => `${r.studentId}|${r.date}|${r.time}|${r.pcIndex}`));
-        
         const virtual = [];
         const start = new Date(); start.setMonth(start.getMonth() - 1);
         const end = new Date(); end.setMonth(end.getMonth() + 3);
 
-        // ★高速化：日付リストをあらかじめ1回だけ作成しておく
-        const dateList = [];
-        let dPtr = new Date(start);
-        while (dPtr <= end) {
-            dateList.push({ dNorm: normalizeDate(dPtr), day: dPtr.getDay() });
-            dPtr.setDate(dPtr.getDate() + 1);
-        }
-
         students.forEach(st => {
-            let curr = new Date(start);
             if (st.fixedDay !== "" && st.fixedDay !== undefined && st.fixedTime) {
                 const targetDay = Number(st.fixedDay);
                 const tNorm = cleanTime(st.fixedTime);
-                const stId = st.id;
+                let curr = new Date(start);
 
-                dateList.forEach(item => {
-                    if (item.day === targetDay) {
-                        const key = stId + "_" + item.dNorm + "_" + tNorm + "_0";
+                while (curr <= end) {
+                    if (curr.getDay() === targetDay) {
+                        const dNorm = normalizeDate(curr);
+                        const key = `${st.id}|${dNorm}|${tNorm}`;
+
+                        // ★シートに「予約」または「取消」の記録があれば、固定枠の自動生成をスキップ
                         if (!statusMap.has(key)) {
                             virtual.push({
-                                date: item.dNorm, time: tNorm, studentId: stId, name: st.name,
+                                date: dNorm, time: tNorm, studentId: st.id, name: st.name,
                                 course: st.course, pcIndex: 0, status: "予約"
                             });
                         }
                     }
-                });
-                
-                // while (curr <= end) {
-                //     if (curr.getDay() === targetDay) {
-                //         const dNorm = normalizeDate(curr);
-                //         // 固定枠はPC1(index 0)を想定
-                //         // const key = `${st.id}|${dNorm}|${tNorm}|0`;
-                //         const key = st.id + "_" + dNorm + "_" + tNorm + "_0";
-                        
-                //         // if (!statusMap.has(key)) {
-                //         //     virtual.push({
-                //         //         date: dNorm, time: tNorm, studentId: st.id, name: st.name,
-                //         //         course: st.course, pcIndex: 0, status: "予約"
-                //         //     });
-                //         // }
-
-                //         if (!statusMap.has(key)) {
-                //             virtual.push({
-                //                 date: dNorm, 
-                //                 time: tNorm, 
-                //                 studentId: st.id, 
-                //                 name: st.name,
-                //                 course: st.course, 
-                //                 pcIndex: 0, 
-                //                 status: "予約"
-                //             });
-                //         }
-
-                //     }
-                //     curr.setDate(curr.getDate() + 1);
-                // }
-
-
-                // while (curr <= end) {
-                //     if (curr.getDay() === targetDay) {
-                //         const dNorm = normalizeDate(curr);
-                //         const key = `${st.id}|${dNorm}|${tNorm}`;
-
-                //         // ★シートに「予約」または「取消」の記録があれば、固定枠の自動生成をスキップ
-                //         if (!statusMap.has(key)) {
-                //             virtual.push({
-                //                 date: dNorm, time: tNorm, studentId: st.id, name: st.name,
-                //                 course: st.course, pcIndex: 0, status: "予約"
-                //             });
-                //         }
-                //     }
-                //     curr.setDate(curr.getDate() + 1);
-                // }
+                    curr.setDate(curr.getDate() + 1);
+                }
             }
         });
 
@@ -260,25 +190,10 @@ async function registerStudent() {
 async function makeBooking() {
     const selected = Array.from(document.querySelectorAll('input[name="slotTime"]:checked')).map(cb => cb.value);
     if(!selected.length || !selectedDateStr) return alert("時間を選択してください。");
-
-    // 【月間上限チェック】
-    const targetMonth = selectedDateStr.substring(0, 7); // "YYYY-MM" 形式
-    // 現在の月の予約数をカウント
-    const currentMonthResCount = reservations.filter(r => 
-        r.studentId === currentStudent.id && 
-        r.date.startsWith(targetMonth)
-    ).length;
-
     if(!confirm("予約を確定しますか？")) return;
 
     document.getElementById('loadingOverlay').style.display = 'flex';
     try {
-        await syncData(); // 予約直前に最新の予約リスト（固定枠含む）を取得
-        const month = selectedDateStr.substring(0, 7);
-        const count = reservations.filter(r => String(r.studentId) === String(currentStudent.id) && r.date.startsWith(month)).length;
-        if (count + selected.length > Number(currentStudent.limit)) {
-            throw new Error(`受講上限（${currentStudent.limit}回）を超えます。\n現在:${count}回、追加:${selected.length}回`);
-        }
         for(let t of selected) {
             const timeNorm = normalizeTime(t);
             const resInSlot = reservations.filter(r => r.date === selectedDateStr && r.time === timeNorm);
@@ -349,18 +264,7 @@ function renderWeeklySchedule() {
                 for(let pc=0; pc<ADMIN_CAPACITY; pc++) {
                     const r = rowSeats[pc];
                     if(r) {
-                        // let cls = String(r.course).includes("パソコン") ? "cell-pc-blue" : (String(r.course).includes("プログラミング") ? "cell-pc-red" : "cell-pc-default");
-
-                        let cls = "";
-                        if (String(r.course).startsWith("検定：")) {
-                            cls = "cell-exam";
-                        } else if (String(r.course).includes("マンツーマン")) {
-                            cls = "cell-pc-man";
-                        } else {
-                            // 既存の判定
-                            cls = String(r.course).includes("パソコン") ? "cell-pc-blue" : (String(r.course).includes("プログラミング") ? "cell-pc-red" : "cell-pc-default");
-                        }
-
+                        let cls = String(r.course).includes("パソコン") ? "cell-pc-blue" : (String(r.course).includes("プログラミング") ? "cell-pc-red" : "cell-pc-default");
                         html += `<td class="${cls}" onclick="handleAdminCellClick('${dateStr}', '${timeLabel}', ${pc}, '${r.studentId}')">${r.name}</td>`;
                     } else {
                         html += `<td onclick="handleAdminCellClick('${dateStr}', '${timeLabel}', ${pc}, null)"></td>`;
@@ -393,113 +297,22 @@ async function handleAdminCellClick(date, time, pcIndex, studentId) {
         document.getElementById('modalDate').innerText = date;
         document.getElementById('modalTime').innerText = time;
         document.getElementById('modalPc').innerText = pcIndex + 1;
-
-        // 受講生リストをセット
         document.getElementById('modalStudentSelect').innerHTML = '<option value="">受講生を選択</option>' + students.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-        // 検定リストをセット
-        // document.getElementById('modalExamSelect').innerHTML = '<option value="">-- 検定を選択 --</option>' + examNames.map(n => `<option value="${n}">${n}</option>`).join('');
-        const modalExamSelect = document.getElementById('modalExamSelect');
-        if (modalExamSelect) {
-            modalExamSelect.innerHTML = '<option value="">-- 検定を選択 --</option>' + 
-                examNames.map(n => `<option value="${n}">${n}</option>`).join('');
-        }
-        const studentArea = document.getElementById('studentSelectionArea');
-        const examArea = document.getElementById('examSelectionArea');
-
-        // --- PCごとの表示切り替えロジック ---
-        
-        if (pcIndex >= 5) { 
-            // PC6(index 5)・PC7(index 6) の場合：検定のみ表示
-            studentArea.style.display = 'none';
-            examArea.style.display = 'block';
-            document.getElementById('modalStudentSelect').value = "";
-        } else if (pcIndex >= 2) { 
-            // PC3(index 2) 〜 PC5(index 4) の場合：両方表示（受講生 or 検定）
-            studentArea.style.display = 'block';
-            examArea.style.display = 'block';
-        } else {
-            // PC1(index 0)・PC2(index 1) の場合：受講生のみ表示
-            studentArea.style.display = 'block';
-            examArea.style.display = 'none';
-            document.getElementById('modalExamSelect').value = "";
-        }
-
         document.getElementById('adminBookingModal').style.display = 'block';
     }
 }
 
 async function executeAdminBooking() {
     const sid = document.getElementById('modalStudentSelect').value;
-    // const examName = document.getElementById('modalExamSelect') ? document.getElementById('modalExamSelect').value : "";
-    const examName = document.getElementById('modalExamSelect').value;
-    if(!sid && !examName) return alert("受講生または検定を選択してください");
-
-    const date = selectedCell.date;
-    const time = normalizeTime(selectedCell.time);
-    const pcIdx = selectedCell.pcIndex;
-    const resInSlot = reservations.filter(r => r.date === date && r.time === time);
-
-    // 制約チェック
-    const hasManToMan = resInSlot.some(r => String(r.course).includes("マンツーマン"));
-    const hasProgramming = resInSlot.some(r => String(r.course).includes("プログラミング"));
-    const hasExam = resInSlot.some(r => String(r.course).startsWith("検定："));
-
-    if (examName) {
-        // --- 検定試験の優先順位チェックロジック ---
-        // 優先順位: PC6(5), PC7(6), PC5(4), PC4(3), PC3(2)
-        const priorityOrder = [5, 6, 4, 3, 2];
-        const isOccupied = (idx) => resInSlot.some(r => Number(r.pcIndex) === idx);
-
-        // クリックされたPCより優先度が高いPCが空いていないか確認
-        for (let p of priorityOrder) {
-            if (p === pcIdx) break; // 自分の番まで来たらOK
-            if (!isOccupied(p)) {
-                return alert(`PC${p + 1} が空いています。PC${p + 1} から順に使用してください。`);
-            }
-        }
-
-        // コース制約チェック
-        const hasManToMan = resInSlot.some(r => String(r.course).includes("マンツーマン"));
-        const hasProgramming = resInSlot.some(r => String(r.course).includes("プログラミング"));
-        if (hasManToMan || hasProgramming) return alert("マンツーマンまたはプログラミングの予約があるため、検定は登録できません。");
-    } else {
-        const st = students.find(s => s.id === sid);
-        if (hasExam && (st.course.includes("マンツーマン") || st.course.includes("プログラミング"))) {
-            return alert("検定試験が登録されているため、マンツーマンまたはプログラミングは予約できません。");
-        }
-    }
-
-    const overlay = document.getElementById('loadingOverlay');
-    if(overlay) overlay.style.display = 'flex';
-
+    if(!sid) return;
+    const st = students.find(s => s.id === sid);
+    document.getElementById('loadingOverlay').style.display = 'flex';
     try {
-        let studentObj, courseName;
-        if (examName) {
-            studentObj = { id: "EXAM", name: examName };
-            courseName = "検定：" + examName;
-        } else {
-            studentObj = students.find(s => s.id === sid);
-            courseName = studentObj.course;
-        }
-        
-        await sendToGoogleSheet(date, time, "予約", { ...studentObj, course: courseName }, pcIdx);
-        // await sendToGoogleSheet(date, time, "予約", { ...studentObj, course: courseName }, selectedCell.pcIndex);
+        await sendToGoogleSheet(selectedCell.date, selectedCell.time, "予約", st, selectedCell.pcIndex);
         await syncData(); closeModal(); renderWeeklySchedule();
     } catch(e) { alert("送信エラー"); }
-    finally { if(overlay) overlay.style.display = 'none'; }
+    finally { document.getElementById('loadingOverlay').style.display = 'none'; }
 }
-
-// async function executeAdminBooking() {
-//     const sid = document.getElementById('modalStudentSelect').value;
-//     if(!sid) return;
-//     const st = students.find(s => s.id === sid);
-//     document.getElementById('loadingOverlay').style.display = 'flex';
-//     try {
-//         await sendToGoogleSheet(selectedCell.date, selectedCell.time, "予約", st, selectedCell.pcIndex);
-//         await syncData(); closeModal(); renderWeeklySchedule();
-//     } catch(e) { alert("送信エラー"); }
-//     finally { document.getElementById('loadingOverlay').style.display = 'none'; }
-// }
 
 function handleLogin() {
     const id = document.getElementById('loginId').value;
@@ -582,6 +395,8 @@ function renderMyReservations(monthPrefix) {
 function renderSlots(date) {
     const container = document.getElementById('slotContainer'); if(!container) return; container.innerHTML = '';
     const dayOfWeek = new Date(date.replace(/-/g, '/')).getDay();
+    
+    // その日の全予約を取得
     const daysRes = reservations.filter(r => r.date === date);
 
     TIMES.forEach(t => {
@@ -591,45 +406,29 @@ function renderSlots(date) {
         const remain = STUDENT_CAPACITY - count;
         const booked = resInSlot.some(r => r.studentId === currentStudent.id);
         
-        // 1. 特殊な予約（マンツーマン・検定）の有無をチェック
+        // ★マンツーマンコースが既に予約されているかチェック
         const hasManToMan = resInSlot.some(r => String(r.course).includes("マンツーマン"));
-        const hasExamInSlot = resInSlot.some(r => String(r.course).startsWith("検定："));
 
-        // 2. 基本的なブロック条件（時間外、自身が予約済、満席など）
         let isSpecialBlock = (tNorm === "09:00" || tNorm === "12:00");
-        let isBlocked = isSpecialBlock || (tNorm === "18:00" && (dayOfWeek === 2 || dayOfWeek === 6)) || (tNorm === "19:00" && dayOfWeek !== 3) || booked || remain <= 0;
-
-        // 3. コースごとの制約ロジックを追加
-        const myCourse = String(currentStudent.course);
-
-        if (hasManToMan) {
-            // マンツーマンが入っている時間は、誰であっても予約不可
-            isBlocked = true;
-        }
-
-        if (hasExamInSlot) {
-            // 検定が入っている時間は、プログラミング教室とマンツーマンコースの人は予約不可
-            if (myCourse.includes("プログラミング") || myCourse.includes("マンツーマン")) {
-                isBlocked = true;
-            }
-        }
-
-        // 警告表示（残りわずか）の判定：ブロックされていない場合のみ
-        let isWarn = !isBlocked && !booked && remain > 0 && remain <= 2;
         
+        // ★isBlocked の条件に hasManToMan を追加
+        let isBlocked = isSpecialBlock || (tNorm === "18:00" && (dayOfWeek === 2 || dayOfWeek === 6)) || (tNorm === "19:00" && dayOfWeek !== 3) || booked || remain <= 0 || hasManToMan;
+        
+        let isWarn = !isSpecialBlock && !booked && !hasManToMan && remain > 0 && remain <= 2;
         const div = document.createElement('div');
         div.className = `slot-card ${isBlocked && !isWarn ? 'full' : (isWarn ? 'warn-block' : '')}`;
         
-        // アイコン表示の決定
-        let txt = isSpecialBlock ? "－" : (booked ? "済" : (isWarn ? "▲" : (isBlocked ? "×" : "〇")));
+        // 表示アイコンの切り替え（マンツーマンで埋まっている場合は「×」）
+        let txt = isSpecialBlock ? "－" : (booked ? "済" : (isWarn ? "▲" : ( (remain <= 0 || hasManToMan) ? "×" : "〇")));
         
         div.innerHTML = `<strong>${t}</strong><br><span class="badge ${isWarn?'bg-warn':(isBlocked?'bg-ng':'bg-ok')}">${txt}</span>${!isBlocked && !isWarn ? `<input type="checkbox" name="slotTime" value="${t}">` : ''}`;
         
-        if(isWarn) div.onclick = () => alert("残りわずかのため、教室へお問い合わせください。");
+        if(isWarn) div.onclick = () => alert("残りわずかのため、教室へお電話ください。");
         else if(!isBlocked) div.onclick = (e) => { if(e.target.type !== 'checkbox') { const cb = div.querySelector('input'); cb.checked = !cb.checked; } };
         container.appendChild(div);
     });
 }
+
 function renderCalendar() {
     const grid = document.getElementById('calendarGrid'); if(!grid) return; grid.innerHTML = '';
     const year = viewDate.getFullYear(); const month = viewDate.getMonth();
@@ -645,24 +444,5 @@ function renderCalendar() {
         if(dStr === selectedDateStr) el.classList.add('selected');
         if(dStr < normalizeDate(new Date())) el.classList.add('disabled'); else el.onclick = () => selectDate(dStr);
         grid.appendChild(el);
-    }
-}
-
-// 検定登録
-async function registerExamName() {
-    const name = document.getElementById('newExamName').value;
-    if(!name) return;
-    const overlay = document.getElementById('loadingOverlay');
-    if(overlay) overlay.style.display = 'flex';
-    try {
-        await fetch(GAS_URL, {
-            method: 'POST', mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: "examMaster", name: name })
-        });
-        document.getElementById('newExamName').value = '';
-        await syncData();
-    } finally {
-        if(overlay) overlay.style.display = 'none';
     }
 }

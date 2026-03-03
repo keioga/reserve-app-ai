@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>予約画面 - 受講生用</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+    <div class="header-bar">
+        <h1>受講生メニュー</h1>
+    </div>
+
+    <div class="content active">
+        <!-- ログイン前 -->
+        <div id="login-form" class="login-box">
+            <h2>ログイン</h2>
+            <p style="font-size:0.8rem; color:#666;">会員番号と生年月日(月日4桁)を入力してください</p>
+            <label>会員番号</label><input type="text" id="loginId" placeholder="例: 1001">
+            <label>生年月日</label><input type="text" id="loginBirth" placeholder="例: 0101">
+            <button onclick="handleLogin()" style="margin-top:20px;">ログイン</button>
+        </div>
+
+        <!-- ログイン後 -->
+        <div id="student-actions" style="display:none;">
+            <div class="user-info-bar">
+                <div>
+                    <strong><span id="displayUserName"></span> 様</strong><br>
+                    <small id="lessonCountInfo"></small>
+                </div>
+                <button class="btn-outline btn-sm" onclick="handleLogout()">ログアウト</button>
+            </div>
+            
+            <h2>1. 日付を選択</h2>
+            <div class="calendar-header">
+                <button class="btn-outline btn-sm" onclick="changeMonth(-1)">前月</button>
+                <strong id="calendarMonthDisplay"></strong>
+                <button class="btn-outline btn-sm" onclick="changeMonth(1)">次月</button>
+            </div>
+            <div id="calendarGrid" class="calendar-grid"></div>
+
+            <!-- 時間選択エリア -->
+            <div id="timeSelectionArea" class="selection-panel" style="display:none;">
+                <h2 style="margin-top:0">2. <span id="selectedDateText"></span> の時間を選択</h2>
+                <div id="slotContainer" class="slot-grid"></div>
+                
+                <div id="contactMessage" class="warn-msg" style="display:none;">
+                    ※ 残りわずかのため、教室に直接お問い合わせください。
+                </div>
+
+                <button id="submitBookingBtn" onclick="makeBooking()" style="margin-top:20px;">予約を確定する</button>
+                <button class="btn-cancel-text" onclick="cancelSelection()">閉じる</button>
+            </div>
+
+            <h2>今月の予約状況</h2>
+            <div id="myReservations"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ローディング表示 -->
+<div id="loadingOverlay" class="loading-overlay" style="display:none;">
+    <div class="spinner"></div>
+    <p style="color:white; margin-top:10px;">データを同期中...</p>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

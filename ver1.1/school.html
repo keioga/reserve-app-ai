@@ -108,15 +108,6 @@
             </div>
             <div id="studentList" style="margin-top:20px;"></div>
         </div>
-        <!-- school.html: registerStudent() ボタンのすぐ下あたりに追記 -->
-        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px dashed #ccc;">
-            <h3>検定試験名の登録</h3>
-            <div style="display: flex; gap: 10px;">
-                <input type="text" id="newExamName" placeholder="例: 日商PC検定3級">
-                <button onclick="registerExamName()" class="btn-outline" style="width: auto;">試験登録</button>
-            </div>
-            <div id="examNameList" style="margin-top: 10px; font-size: 0.85rem; color: #666;"></div>
-        </div>
     </div>
 </div>
 
@@ -125,14 +116,8 @@
     <div class="modal-content">
         <h3>予約登録</h3>
         <p><span id="modalDate"></span> <span id="modalTime"></span><br>PC<span id="modalPc"></span></p>
-        <div id="studentSelectionArea">
-            <label>受講生を選択</label>
-            <select id="modalStudentSelect"></select>
-        </div>
-        <div id="examSelectionArea" style="margin-top:15px; display:none; padding:10px; background:#f9f9f9; border-radius:5px;">
-            <label>検定試験として登録</label>
-            <select id="modalExamSelect"></select>
-        </div>
+        <label>受講生を選択</label>
+        <select id="modalStudentSelect"></select>
         <div style="margin-top:20px; display:flex; gap:10px;">
             <button onclick="executeAdminBooking()">予約する</button>
             <button class="btn-outline" onclick="closeModal()">キャンセル</button>

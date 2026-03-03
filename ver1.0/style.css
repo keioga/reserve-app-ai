@@ -92,21 +92,3 @@ button:disabled { background: #ccc; cursor: not-allowed; opacity: 1; }
     #admin-week-view, #admin-month-view { display: block !important; } 
     .content { padding: 0; display: block; }
 }
-
-/* 週間予約状況：PC5とPC6の間の境界線を太くする (PC5の右側を強調) */
-.schedule-table th:nth-child(6),
-.schedule-table td:nth-child(6) {
-    border-right: 2px solid #333;
-}
-
-/* 月間予約一覧：「残」と「1」の列の間の境界線を太くする (「残」の右側を強調) */
-.monthly-list-table th:nth-child(3),
-.monthly-list-table td:nth-child(3) {
-    border-right: 2px solid #333;
-}
-
-/* マンツーマンコース専用の色（script.jsの判定で使用） */
-.cell-pc-man { background-color: #d4edda; color: #155724; font-weight: bold; }
-
-/* 検定試験用のセル色 */
-.cell-exam { background-color: #f3e5f5; color: #7b1fa2; font-weight: bold; border: 2px solid #7b1fa2 !important; }
