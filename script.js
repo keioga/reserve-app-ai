@@ -396,12 +396,29 @@ async function handleAdminCellClick(date, time, pcIndex, studentId) {
     if(studentId) {
         const tNorm = normalizeTime(time);
         //const r = reservations.find(res => res.date === date && res.time === tNorm && res.studentId === studentId);
-        const r = reservations.find(res => 
-            res.date === date && 
-            res.time === tNorm && 
-            String(res.studentId).trim() === String(studentId).trim() && 
-            Number(res.pcIndex) === Number(pcIndex)
-        );
+        // const r = reservations.find(res => 
+        //     res.date === date && 
+        //     res.time === tNorm && 
+        //     String(res.studentId).trim() === String(studentId).trim() && 
+        //     Number(res.pcIndex) === Number(pcIndex)
+        // );
+        const r = reservations.find(res => {
+            // 日付、時間、受講生IDが一致していることを大前提とする
+            const baseMatch = res.date === date && 
+                            res.time === tNorm && 
+                            String(res.studentId).trim() === String(studentId).trim();
+
+            if (!baseMatch) return false;
+
+            // 検定試験（EXAM）や休み等の場合は、複数の同一IDが同じ枠に存在するためPC番号までチェックする
+            if (String(studentId).trim() === "EXAM") {
+                return Number(res.pcIndex) === Number(pcIndex);
+            }
+
+            // 通常の受講生の場合は、その時間にそのIDの人は1人しかいないため、
+            // 表示上のPC番号（pcIndex）がズレていても、本人であれば特定（find）に成功させます
+            return true;
+        });
         if(!r) return;
         if(confirm(`${r.name} 様の予約を取り消しますか？`)) {
             document.getElementById('loadingOverlay').style.display = 'flex';
