@@ -190,6 +190,7 @@ async function syncData() {
         if(overlay) overlay.style.display = 'none';
         if (document.getElementById('studentList')) renderStudentList();
         if (document.getElementById('weeklyScheduleContainer')) renderWeeklySchedule();
+        if (document.getElementById('s_select_list')) updateStudentEditDropdown();
     }
 }
 
@@ -305,6 +306,11 @@ function renderWeeklySchedule() {
     const rangeDisplay = document.getElementById('adminWeekRangeDisplay');
     if(!container) return;
     container.innerHTML = '';
+    const resMap = new Map();
+    reservations.forEach(r => {
+        if(!resMap.has(r.date)) resMap.set(r.date, []);
+        resMap.get(r.date).push(r);
+    });
 
     const tempDate = new Date(adminViewDate);
     const day = tempDate.getDay(); 
@@ -312,6 +318,8 @@ function renderWeeklySchedule() {
     const tuesdayDate = new Date(tempDate);
     tuesdayDate.setDate(tempDate.getDate() + diffToTue);
     if(rangeDisplay) rangeDisplay.innerText = `${normalizeDate(tuesdayDate)} 〜 ${normalizeDate(new Date(tuesdayDate.getTime() + 4*24*60*60*1000))}`;
+
+    let totalHtml = '';
 
     for(let i=0; i<5; i++) {
         const targetDate = new Date(tuesdayDate);
@@ -330,8 +338,12 @@ function renderWeeklySchedule() {
             const rowClass = (tNorm === "09:00" || tNorm === "12:00") ? "row-gray" : "";
             html += `<tr class="${rowClass}"><td>${timeLabel}</td>`;
             
-            const resInSlot = reservations.filter(r => r.date === dateStr && r.time === tNorm);
-            const manToManRes = resInSlot.find(r => String(r.course).includes("マンツーマン"));
+            //const resInSlot = reservations.filter(r => r.date === dateStr && r.time === tNorm);
+            // 全体（reservations）ではなく、その日のリスト（resMap）から取得します
+            const dayRes = resMap.get(dateStr) || [];
+            const resInSlot = dayRes.filter(r => r.time === tNorm);
+    
+            const manToManRes = resInSlot.find(r => String(r.course).includes("マンツーマンコース"));
 
             if (manToManRes) {
                 // マンツーマン予約がある場合、その行の全セルを cell-pc-man クラスにする
@@ -352,9 +364,11 @@ function renderWeeklySchedule() {
                         // let cls = String(r.course).includes("パソコン") ? "cell-pc-blue" : (String(r.course).includes("プログラミング") ? "cell-pc-red" : "cell-pc-default");
 
                         let cls = "";
-                        if (String(r.course).startsWith("検定：")) {
+                        if (String(r.course).includes("休み")) {
+                            cls = "cell-holiday"; // 休み専用の色
+                        } else if (String(r.course).startsWith("検定：")) {
                             cls = "cell-exam";
-                        } else if (String(r.course).includes("マンツーマン")) {
+                        } else if (String(r.course).includes("マンツーマンコース")) {
                             cls = "cell-pc-man";
                         } else {
                             // 既存の判定
@@ -369,8 +383,10 @@ function renderWeeklySchedule() {
             }
             html += `</tr>`;
         });
-        container.innerHTML += html + `</tbody></table></div>`;
+        //container.innerHTML += html + `</tbody></table></div>`;
+        totalHtml += html + "</tbody></table></div>";
     }
+    container.innerHTML = totalHtml;
 }
 
 /**
@@ -379,7 +395,13 @@ function renderWeeklySchedule() {
 async function handleAdminCellClick(date, time, pcIndex, studentId) {
     if(studentId) {
         const tNorm = normalizeTime(time);
-        const r = reservations.find(res => res.date === date && res.time === tNorm && res.studentId === studentId);
+        //const r = reservations.find(res => res.date === date && res.time === tNorm && res.studentId === studentId);
+        const r = reservations.find(res => 
+            res.date === date && 
+            res.time === tNorm && 
+            String(res.studentId).trim() === String(studentId).trim() && 
+            Number(res.pcIndex) === Number(pcIndex)
+        );
         if(!r) return;
         if(confirm(`${r.name} 様の予約を取り消しますか？`)) {
             document.getElementById('loadingOverlay').style.display = 'flex';
@@ -439,8 +461,13 @@ async function executeAdminBooking() {
     const pcIdx = selectedCell.pcIndex;
     const resInSlot = reservations.filter(r => r.date === date && r.time === time);
 
+    const isHolidayInSlot = resInSlot.some(r => String(r.course).includes("休み"));
+    if (isHolidayInSlot) {
+        return alert("この時間は「休み」に設定されているため、追加の予約はできません。");
+    }
+
     // 制約チェック
-    const hasManToMan = resInSlot.some(r => String(r.course).includes("マンツーマン"));
+    const hasManToMan = resInSlot.some(r => String(r.course).includes("マンツーマンコース"));
     const hasProgramming = resInSlot.some(r => String(r.course).includes("プログラミング"));
     const hasExam = resInSlot.some(r => String(r.course).startsWith("検定："));
 
@@ -459,12 +486,12 @@ async function executeAdminBooking() {
         }
 
         // コース制約チェック
-        const hasManToMan = resInSlot.some(r => String(r.course).includes("マンツーマン"));
+        const hasManToMan = resInSlot.some(r => String(r.course).includes("マンツーマンコース"));
         const hasProgramming = resInSlot.some(r => String(r.course).includes("プログラミング"));
         if (hasManToMan || hasProgramming) return alert("マンツーマンまたはプログラミングの予約があるため、検定は登録できません。");
     } else {
         const st = students.find(s => s.id === sid);
-        if (hasExam && (st.course.includes("マンツーマン") || st.course.includes("プログラミング"))) {
+        if (hasExam && (st.course.includes("マンツーマンコース") || st.course.includes("プログラミング"))) {
             return alert("検定試験が登録されているため、マンツーマンまたはプログラミングは予約できません。");
         }
     }
@@ -538,9 +565,19 @@ function renderMonthlyList() {
     for(let i=1; i<=20; i++) { html += `<th>${i}</th>`; }
     html += `</tr></thead><tbody>`;
     students.forEach(s => {
-        const myMonthRes = reservations.filter(r => r.studentId === s.id && r.date.startsWith(prefix)).sort((a,b) => a.date.localeCompare(b.date));
+        const myMonthRes = reservations.filter(r => 
+            String(r.studentId).trim() === String(s.id).trim() && 
+            r.date.startsWith(prefix)
+        ).sort((a,b) => a.date.localeCompare(b.date)|| a.time.localeCompare(b.time));
         html += `<tr><td style="text-align:left;">${s.name}</td><td>${s.limit}</td><td>${s.limit - myMonthRes.length}</td>`;
-        for(let i=0; i<20; i++) { if(myMonthRes[i]) { const dP = myMonthRes[i].date.split('-'); html += `<td>${Number(dP[1])}/${Number(dP[2])}</td>`; } else { html += `<td></td>`; } }
+        for(let i=0; i<20; i++) { 
+            if(myMonthRes[i]) { 
+                const dP = myMonthRes[i].date.split('-'); 
+                html += `<td>${Number(dP[1])}/${Number(dP[2])}</td>`; 
+            } else { 
+                html += `<td></td>`; 
+            } 
+        }
         html += `</tr>`;
     });
     container.innerHTML = html + `</tbody></table>`;
@@ -592,12 +629,20 @@ function renderSlots(date) {
         const booked = resInSlot.some(r => r.studentId === currentStudent.id);
         
         // 1. 特殊な予約（マンツーマン・検定）の有無をチェック
-        const hasManToMan = resInSlot.some(r => String(r.course).includes("マンツーマン"));
+        const hasManToMan = resInSlot.some(r => String(r.course).includes("マンツーマンコース"));
         const hasExamInSlot = resInSlot.some(r => String(r.course).startsWith("検定："));
+        
 
         // 2. 基本的なブロック条件（時間外、自身が予約済、満席など）
         let isSpecialBlock = (tNorm === "09:00" || tNorm === "12:00");
         let isBlocked = isSpecialBlock || (tNorm === "18:00" && (dayOfWeek === 2 || dayOfWeek === 6)) || (tNorm === "19:00" && dayOfWeek !== 3) || booked || remain <= 0;
+
+        const isHoliday = resInSlot.some(r => String(r.course).includes("休み"));
+
+        // 基本的なブロック条件に「休み」を追加
+        if (isHoliday) {
+            isBlocked = true;
+        }
 
         // 3. コースごとの制約ロジックを追加
         const myCourse = String(currentStudent.course);
@@ -609,7 +654,7 @@ function renderSlots(date) {
 
         if (hasExamInSlot) {
             // 検定が入っている時間は、プログラミング教室とマンツーマンコースの人は予約不可
-            if (myCourse.includes("プログラミング") || myCourse.includes("マンツーマン")) {
+            if (myCourse.includes("プログラミング") || myCourse.includes("マンツーマンコース")) {
                 isBlocked = true;
             }
         }
@@ -664,5 +709,43 @@ async function registerExamName() {
         await syncData();
     } finally {
         if(overlay) overlay.style.display = 'none';
+    }
+}
+
+// 受講生選択ドロップダウンの中身を更新する
+function updateStudentEditDropdown() {
+    const sel = document.getElementById('s_select_list');
+    if (!sel) return;
+    const currentVal = sel.value; // 現在の選択を維持
+    sel.innerHTML = '<option value="">-- 新規登録（または直接入力） --</option>' +
+        students.map(s => `<option value="${s.id}">${s.name} (${s.id})</option>`).join('');
+    sel.value = currentVal;
+}
+
+// ドロップダウンで受講生を選んだら入力欄に値をセットする
+function handleStudentEditSelect() {
+    const id = document.getElementById('s_select_list').value;
+    if (!id) {
+        // 新規登録が選ばれたら入力を空にする
+        document.getElementById('s_name').value = '';
+        document.getElementById('s_id').value = '';
+        document.getElementById('s_birth').value = '';
+        document.getElementById('s_limit').value = '4';
+        document.getElementById('s_course').value = 'パソコン教室';
+        document.getElementById('s_fixed_day').value = '';
+        document.getElementById('s_fixed_time').value = '';
+        return;
+    }
+    
+    // 選択された受講生の情報を探して各入力欄に入れる
+    const s = students.find(x => String(x.id) === String(id));
+    if (s) {
+        document.getElementById('s_name').value = s.name;
+        document.getElementById('s_id').value = s.id;
+        document.getElementById('s_birth').value = s.birthday;
+        document.getElementById('s_limit').value = s.limit;
+        document.getElementById('s_course').value = s.course;
+        document.getElementById('s_fixed_day').value = s.fixedDay || "";
+        document.getElementById('s_fixed_time').value = s.fixedTime || "";
     }
 }

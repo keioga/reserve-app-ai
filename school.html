@@ -61,6 +61,10 @@
         <div id="admin-student-view" style="display:none;">
             <h2>受講生登録</h2>
             <div class="login-box">
+                <label>受講生を選択（既存情報の修正時）</label>
+                <select id="s_select_list" onchange="handleStudentEditSelect()">
+                    <option value="">-- 新規登録（または直接入力） --</option>
+                </select>
                 <div class="admin-grid">
                     <div><label>氏名</label><input type="text" id="s_name" placeholder="氏名"></div>
                     <div><label>会員番号</label><input type="text" id="s_id" placeholder="1001"></div>
