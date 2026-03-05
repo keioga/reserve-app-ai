@@ -31,7 +31,6 @@
             <button class="btn-outline btn-sm active" id="btn-tab-week" onclick="switchAdminSubTab('week')">週間予約状況</button>
             <button class="btn-outline btn-sm" id="btn-tab-month" onclick="switchAdminSubTab('month')">月間予約一覧</button>
             <button class="btn-outline btn-sm" id="btn-tab-student" onclick="switchAdminSubTab('student')">受講生登録</button>
-            <button class="btn-outline btn-sm" style="color:#d63384; border-color:#d63384;" onclick="openInitModal()">月初め更新処理</button>
         </div>
 
         <!-- ①週間スケジュール（座席表） -->
@@ -115,7 +114,7 @@
             <div id="studentList" style="margin-top:20px;"></div>
         </div>
         <!-- school.html: registerStudent() ボタンのすぐ下あたりに追記 -->
-        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px dashed #ccc;" class="no-print" >
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px dashed #ccc;">
             <h3>検定試験名の登録</h3>
             <div style="display: flex; gap: 10px;">
                 <input type="text" id="newExamName" placeholder="例: 日商PC検定3級">
@@ -151,25 +150,6 @@
     <p style="color:white; margin-top:10px;">データを同期中...</p>
 </div>
 
-
-<div id="initModal" class="modal">
-    <div class="modal-content">
-        <h3 style="margin-top:0;">月初めの更新処理</h3>
-        <p style="font-size: 0.8rem; color: #666;">
-            終了（確定）させる月を選択してください。<br>
-            その月の未受講分が翌月の「繰越」に加算されます。
-        </p>
-        <label>終了する月</label>
-        <select id="initTargetMonth" style="margin-bottom:20px;"></select>
-        
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-            <button onclick="executeMonthlyInitialization()" style="background: #dc3545;">この月の更新を実行する</button>
-            <button class="btn-outline" onclick="closeInitModal()">キャンセル</button>
-        </div>
-    </div>
-</div>
-
-<!-- 月更新ダイアログ -->
 <script src="script.js"></script>
 </body>
 </html>
